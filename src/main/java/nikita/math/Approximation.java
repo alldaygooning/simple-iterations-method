@@ -1,9 +1,11 @@
 package nikita.math;
 
-public class Approximation {
-	float[] values;
+import java.math.BigDecimal;
 
-	public Approximation(float[] values) {
+public class Approximation {
+	BigDecimal[] values;
+
+	public Approximation(BigDecimal[] values) {
 		this.values = values;
 	}
 }

@@ -1,20 +1,28 @@
 {
-    "matrix": {
-        "size": 3,
-        "content": [
-            {
-                "row": [10, 2, 1],
-                "result": 1
-            },
-            {
-                "row": [1, 11, 2],
-                "result": 2
-            },
-            {
-                "row": [0, 1, 12],
-                "result": 3
-            }
+  "absolute-accuracy": 0.01,
+  "matrix": {
+    "size": 3,
+    "content": [
+      {
+        "result": 1,
+        "row": [
+          10,
+          2,
+          1
         ]
-    },
-    "absolute-accuracy": 0.01
+      },
+      {
+        "result": 2,
+        "row": [
+          1,
+          11,
+          2
+        ]
+      },
+      {
+        "result": 3,
+        "row": "Provided: 1aaaa. Expected: Decimal number."
+      }
+    ]
+  }
 }

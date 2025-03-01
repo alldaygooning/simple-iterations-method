@@ -1,48 +1,147 @@
 {
-    "matrix": {
-        "size": 10,
-        "content": [
-            {
-                "row": [10, 2, 1, 0, 0, 0, 0, 0, 0, 0],
-                "result": 1
-            },
-            {
-                "row": [1, 11, 2, 1, 0, 0, 0, 0, 0, 0],
-                "result": 2
-            },
-            {
-                "row": [0, 1, 12, 3, 1, 0, 0, 0, 0, 0],
-                "result": 3
-            },
-            {
-                "row": [0, 0, 1, 13, 4, 1, 0, 0, 0, 0],
-                "result": 4
-            },
-            {
-                "row": [0, 0, 0, 1, 14, 5, 1, 0, 0, 0],
-                "result": 5
-            },
-            {
-                "row": [0, 0, 0, 0, 1, 15, 6, 1, 0, 0],
-                "result": 6
-            },
-            {
-                "row": [0, 0, 0, 0, 0, 1, 16, 7, 1, 0],
-                "result": 7
-            },
-            {
-                "row": [0, 0, 0, 0, 0, 0, 1, 17, 8, 1],
-                "result": 8
-            },
-            {
-                "row": [0, 0, 0, 0, 0, 0, 0, 1, 18, 9],
-                "result": 9
-            },
-            {
-                "row": [0, 0, 0, 0, 0, 0, 0, 0, 1, 19],
-                "result": 10
-            }
+  "absolute-accuracy": 0.01,
+  "matrix": {
+    "size": 10,
+    "content": [
+      {
+        "result": 1,
+        "row": [
+          10000,
+          2,
+          1,
+          1,
+          25,
+          1,
+          -1,
+          -1,
+          1,
+          0
         ]
-    },
-    "absolute-accuracy": 0.01
+      },
+      {
+        "result": 2,
+        "row": "Provided: Provided: Provided: Provided: Provided: Provided: [6,8,9,1,2,3,4,5,7] Provided array length: 9. Expected: 10 in accordance with matrix 'size'.. Expected: Array of Decimal number.. Expected: Array of Decimal number.. Expected: Array of Decimal number.. Expected: Array of Decimal number.. Expected: Array of Decimal number.. Expected: Array of Decimal number."
+      },
+      {
+        "result": 3,
+        "row": [
+          0,
+          1,
+          12,
+          3,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "result": 4,
+        "row": [
+          0,
+          0,
+          1,
+          13,
+          4,
+          1,
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "result": 5,
+        "row": [
+          0,
+          0,
+          0,
+          1,
+          14,
+          5,
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "result": 6,
+        "row": [
+          0,
+          0,
+          0,
+          0,
+          1,
+          15,
+          6,
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "result": 7,
+        "row": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          16,
+          7,
+          1,
+          0
+        ]
+      },
+      {
+        "result": 8,
+        "row": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          17,
+          8,
+          1
+        ]
+      },
+      {
+        "result": 9,
+        "row": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          18,
+          9
+        ]
+      },
+      {
+        "result": 10,
+        "row": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          19
+        ]
+      }
+    ]
+  }
 }

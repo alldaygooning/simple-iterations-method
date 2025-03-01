@@ -1,5 +1,8 @@
 package nikita.math;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.Arrays;
 
 import nikita.exception.ExecutionException;
@@ -8,6 +11,9 @@ public class Matrix {
 	int size;
 	Row[] rows;
 
+	// Define a MathContext for operations (you can customize the precision as
+	private static final MathContext MATH_CONTEXT = new MathContext(20, RoundingMode.HALF_UP);
+
 	public Matrix(int size, Row[] rows) {
 		this.size = size;
 		this.rows = rows;
@@ -15,20 +21,21 @@ public class Matrix {
 
 	public boolean isDiagonallyDominant() {
 		boolean strict = false;
-		for (int row = 0; row < this.size; row++) {
-			float diagonalValue = 0;
-			float totalValue = 0;
+		for (int rowIndex = 0; rowIndex < this.size; rowIndex++) {
+			BigDecimal diagonalValue = BigDecimal.ZERO;
+			BigDecimal totalValue = BigDecimal.ZERO;
 			for (int column = 0; column < this.size; column++) {
-				float currentValue = this.rows[row].values[column];
-				if (column == row) {
-					diagonalValue = Math.abs(currentValue);
+				BigDecimal currentValue = this.rows[rowIndex].values[column];
+				if (column == rowIndex) {
+					diagonalValue = currentValue.abs();
 				} else {
-					totalValue = totalValue + Math.abs(currentValue);
+					totalValue = totalValue.add(currentValue.abs(), MATH_CONTEXT);
 				}
 			}
-			if (diagonalValue < totalValue) {
+			// If diagonal is less than the sum of the rest, it's not diagonally dominant.
+			if (diagonalValue.compareTo(totalValue) < 0) {
 				return false;
-			} else if (diagonalValue > totalValue) {
+			} else if (diagonalValue.compareTo(totalValue) > 0) {
 				strict = true;
 			}
 		}
@@ -36,22 +43,22 @@ public class Matrix {
 	}
 
 	public boolean isDiagonalDominanceEnforcable() {
-		for (int row = 0; row < this.size; row++) {
-			float[] currentRow = this.rows[row].values;
-			float maxAbs = 0;
-			float sumAllAbs = 0;
+		for (int rowIndex = 0; rowIndex < this.size; rowIndex++) {
+			BigDecimal[] currentRow = this.rows[rowIndex].values;
+			BigDecimal maxAbs = BigDecimal.ZERO;
+			BigDecimal sumAllAbs = BigDecimal.ZERO;
 
-			for (float value : currentRow) {
-				float absValue = Math.abs(value);
-				sumAllAbs += absValue;
-				if (absValue > maxAbs) {
+			for (BigDecimal value : currentRow) {
+				BigDecimal absValue = value.abs();
+				sumAllAbs = sumAllAbs.add(absValue, MATH_CONTEXT);
+				if (absValue.compareTo(maxAbs) > 0) {
 					maxAbs = absValue;
 				}
 			}
 
-			float sumOtherAbs = sumAllAbs - maxAbs;
+			BigDecimal sumOtherAbs = sumAllAbs.subtract(maxAbs, MATH_CONTEXT);
 
-			if (maxAbs < sumOtherAbs) {
+			if (maxAbs.compareTo(sumOtherAbs) < 0) {
 				return false;
 			}
 		}
@@ -61,33 +68,33 @@ public class Matrix {
 	public void enforceDiagonalDominance() {
 		int n = this.size;
 
-		// Строю двудольны граф, где слева вершины - индексы рядов, справа - колонок
-		// Если есть грань между рядом r и колонкой c, то кандидат в ряду r на месте c.
+		// Build a bipartite graph where left nodes represent rows and right nodes
+		// represent columns.
+		// If there is an edge between row r and column c, then the element in r at
+		// index c is a candidate.
 		boolean[][] graph = new boolean[n][n];
 
 		for (int r = 0; r < n; r++) {
-			float[] currentRow = this.rows[r].values;
-			// Считаем сумму абсолютных значений в каждом ряду
-			float totalAbs = 0;
+			BigDecimal[] currentRow = this.rows[r].values;
+			BigDecimal totalAbs = BigDecimal.ZERO;
 			for (int k = 0; k < n; k++) {
-				totalAbs += Math.abs(currentRow[k]);
+				totalAbs = totalAbs.add(currentRow[k].abs(), MATH_CONTEXT);
 			}
-			// Проверить каждый элемент, может ли он быть кадидатом. Если да, то добавить
-			// грань на граф
+			// Mark candidates in the bipartite graph
 			for (int c = 0; c < n; c++) {
-				float pivotCandidate = Math.abs(currentRow[c]);
-				float otherAbs = totalAbs - pivotCandidate;
-				if (pivotCandidate >= otherAbs) {
+				BigDecimal pivotCandidate = currentRow[c].abs();
+				BigDecimal otherAbs = totalAbs.subtract(pivotCandidate, MATH_CONTEXT);
+				if (pivotCandidate.compareTo(otherAbs) >= 0) {
 					graph[r][c] = true;
 				}
 			}
 		}
 
-		// Найти идеальную пары. В каждом ряду должна быть только одна колонка с
-		// кандидатом.
+		// Find a perfect matching. matchForColumn[c] = r indicates that row r is
+		// matched to column c.
 		int[] matchForColumn = new int[n];
 		for (int i = 0; i < n; i++) {
-			matchForColumn[i] = -1; // Изначально везде не метч
+			matchForColumn[i] = -1;
 		}
 
 		for (int r = 0; r < n; r++) {
@@ -99,21 +106,20 @@ public class Matrix {
 
 		Row[] newRows = new Row[n];
 
-		// Если ряды надо пересортировать, то ряд встает на то место, с какой колонкой
-		// он заметчился
+		// Rearrange rows so that each row's diagonal candidate is placed on the
+		// diagonal.
 		for (int c = 0; c < n; c++) {
 			int r = matchForColumn[c];
-			float[] originalValues = this.rows[r].values;
+			BigDecimal[] originalValues = this.rows[r].values;
 			int length = originalValues.length;
-			float[] newValues = Arrays.copyOf(originalValues, length);
-			// Переставляет так, чтобы кандидат встал в диагональную позицию
-			if (c < length && c != findCandidateIndex(originalValues)) {
-				int candidateIndex = c;
-				if (candidateIndex != c) {
-					float tmp = newValues[c];
-					newValues[c] = newValues[candidateIndex];
-					newValues[candidateIndex] = tmp;
-				}
+			BigDecimal[] newValues = Arrays.copyOf(originalValues, length);
+			// Find candidate index; if not already in the diagonal position, perform a
+			// swap.
+			int candidateIndex = findCandidateIndex(originalValues);
+			if (candidateIndex != c && candidateIndex != -1 && candidateIndex < length) {
+				BigDecimal tmp = newValues[c];
+				newValues[c] = newValues[candidateIndex];
+				newValues[candidateIndex] = tmp;
 			}
 			newRows[c] = new Row(newValues, this.rows[r].result);
 		}
@@ -133,32 +139,53 @@ public class Matrix {
 		return false;
 	}
 
-	// Ищет первое место, куда можно поставить кандидата, чтобы он подошел
-	private int findCandidateIndex(float[] rowValues) {
+	// Finds the first column index where the candidate value (satisfying the
+	// condition) is found.
+	private int findCandidateIndex(BigDecimal[] rowValues) {
 		int n = rowValues.length;
-		float totalAbs = 0;
+		BigDecimal totalAbs = BigDecimal.ZERO;
 		for (int i = 0; i < n; i++) {
-			totalAbs += Math.abs(rowValues[i]);
+			totalAbs = totalAbs.add(rowValues[i].abs(), MATH_CONTEXT);
 		}
 		for (int i = 0; i < n; i++) {
-			float candidate = Math.abs(rowValues[i]);
-			if (candidate >= totalAbs - candidate) {
+			BigDecimal candidate = rowValues[i].abs();
+			if (candidate.compareTo(totalAbs.subtract(candidate, MATH_CONTEXT)) >= 0) {
 				return i;
 			}
 		}
 		return -1;
 	}
 
-	// Фробениус?
-	public float getEuclidianNorm() {
-		double total = 0;
+	// Returns the Euclidean norm (Frobenius norm) of the matrix.
+	// Since BigDecimal doesn't have a built-in square root, we use a Newton-Raphson
+	// approximation.
+	public BigDecimal getEuclidianNorm() {
+		BigDecimal total = BigDecimal.ZERO;
 		for (Row row : this.rows) {
-			for (double value : row.values) {
-				total = total + Math.pow(value, 2);
+			for (BigDecimal value : row.values) {
+				// value^2 = value * value
+				total = total.add(value.multiply(value, MATH_CONTEXT), MATH_CONTEXT);
 			}
 		}
+		return sqrt(total, MATH_CONTEXT);
+	}
 
-		return (float) Math.pow(total, 0.5);
+	// Newton–Raphson method to compute square root for BigDecimal
+	private static BigDecimal sqrt(BigDecimal value, MathContext context) {
+		if (value.compareTo(BigDecimal.ZERO) < 0) {
+			throw new ArithmeticException("Square root of negative value");
+		}
+		if (value.equals(BigDecimal.ZERO)) {
+			return BigDecimal.ZERO;
+		}
+
+		BigDecimal x = new BigDecimal(Math.sqrt(value.doubleValue()), context);
+		BigDecimal two = new BigDecimal(2, context);
+		// Iteratively apply Newton's method
+		for (int i = 0; i < 20; i++) {
+			x = x.add(value.divide(x, context)).divide(two, context);
+		}
+		return x;
 	}
 
 	@Override
@@ -169,7 +196,7 @@ public class Matrix {
 
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < rows.length; i++) {
-			String[] wrappers = this.getWrapper(i, rows.length);
+			String[] wrappers = getWrapper(i, rows.length);
 			sb.append(wrappers[0]);
 			sb.append(rows[i].valuesToString());
 			sb.append(wrappers[1]);

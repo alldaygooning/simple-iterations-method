@@ -1,5 +1,6 @@
 package nikita.input.manual;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -21,10 +22,10 @@ public class ManualParser {
 
 	public LinearSystem parse() {
 		int size = this.getSize();
-		Matrix maxtrix = this.getMatrix(size);
-		float absoluteAccuracy = this.getAbsoluteAccuracy();
+		Matrix matrix = this.getMatrix(size);
+		BigDecimal absoluteAccuracy = this.getAbsoluteAccuracy();
 
-		return new LinearSystem(absoluteAccuracy, maxtrix);
+		return new LinearSystem(absoluteAccuracy, matrix);
 	}
 
 	public int getSize() {
@@ -35,12 +36,12 @@ public class ManualParser {
 				ConsolePrinter.println(String.format("Provided: %s. Expected: %s.", input, JsonParser.SIZE_EXPECTED));
 				continue;
 			}
-			return (Integer.parseInt(input));
+			return Integer.parseInt(input);
 		}
 	}
 
 	public Matrix getMatrix(int size) {
-		ArrayList<Row> rows = new ArrayList<Row>();
+		ArrayList<Row> rows = new ArrayList<>();
 		for (int i = 1; i <= size; i++) {
 			ConsolePrinter.print(String.format("%d/%d ", i, size));
 			Row row = this.getRow(size);
@@ -61,7 +62,7 @@ public class ManualParser {
 				continue;
 			}
 
-			float[] coefficients = new float[size];
+			BigDecimal[] coefficients = new BigDecimal[size];
 
 			boolean invalidInput = false;
 			for (int i = 0; i < size; i++) {
@@ -71,7 +72,13 @@ public class ManualParser {
 					invalidInput = true;
 					break;
 				}
-				coefficients[i] = Float.parseFloat(value);
+				try {
+					coefficients[i] = new BigDecimal(value);
+				} catch (NumberFormatException e) {
+					ConsolePrinter.println(String.format("Invalid number format for coefficient: %s", value));
+					invalidInput = true;
+					break;
+				}
 			}
 
 			String resultStr = values[size];
@@ -79,7 +86,15 @@ public class ManualParser {
 				ConsolePrinter.println(String.format("Provided: %s. Expected: %s.", resultStr, JsonParser.RESULT_EXPECTED));
 				invalidInput = true;
 			}
-			float result = Float.parseFloat(resultStr);
+
+			BigDecimal result;
+			try {
+				result = new BigDecimal(resultStr);
+			} catch (NumberFormatException e) {
+				ConsolePrinter.println(String.format("Invalid number format for result: %s", resultStr));
+				invalidInput = true;
+				result = BigDecimal.ZERO; // dummy initialization
+			}
 
 			if (invalidInput) {
 				continue;
@@ -89,7 +104,7 @@ public class ManualParser {
 		}
 	}
 
-	public float getAbsoluteAccuracy() {
+	public BigDecimal getAbsoluteAccuracy() {
 		while (true) {
 			ConsolePrinter.print(String.format("Absolute accuracy (%s): ", JsonParser.ABSOLUTE_ACCURACY_EXPECTED));
 			String input = this.getInput();
@@ -97,10 +112,13 @@ public class ManualParser {
 				ConsolePrinter.println(String.format("Provided: %s. Expected: %s.", input, JsonParser.ABSOLUTE_ACCURACY_EXPECTED));
 				continue;
 			}
-			return Float.parseFloat(input);
+			try {
+				return new BigDecimal(input);
+			} catch (NumberFormatException e) {
+				ConsolePrinter.println(String.format("Invalid number format for absolute accuracy: %s", input));
+			}
 		}
 	}
-
 
 	public String getInput() {
 		while (true) {
@@ -108,7 +126,7 @@ public class ManualParser {
 			String input = scanner.nextLine();
 			if (input.isBlank()) {
 				continue;
-			} else if (input.trim().toLowerCase().equals("exit")) {
+			} else if (input.trim().equalsIgnoreCase("exit")) {
 				throw new ExecutionException("Manual matrix creation terminated.");
 			}
 			return input;

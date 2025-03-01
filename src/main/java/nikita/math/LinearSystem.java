@@ -1,17 +1,23 @@
 package nikita.math;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 
 import nikita.exception.ExecutionException;
 import nikita.output.ConsolePrinter;
 
 public class LinearSystem {
-	float absoluteAccuracy;
+	BigDecimal absoluteAccuracy;
 	Matrix matrix;
-	ArrayList<Approximation> approximations = new ArrayList<Approximation>();
+	ArrayList<Approximation> approximations = new ArrayList<>();
 	int iteration = 0;
 
-	public LinearSystem(float absoluteAccuracy, Matrix matrix) {
+	// Define a MathContext for operations (customize precision if needed)
+	private static final MathContext MATH_CONTEXT = new MathContext(20, RoundingMode.HALF_UP);
+
+	public LinearSystem(BigDecimal absoluteAccuracy, Matrix matrix) {
 		this.absoluteAccuracy = absoluteAccuracy;
 		this.matrix = matrix;
 
@@ -31,56 +37,58 @@ public class LinearSystem {
 	}
 
 	public void getInitialApproximation() {
-		ArrayList<Float> values = new ArrayList<Float>();
+		// Compute initial approximation: for each i, x_i^(0) = result / row[i][i]
+		ArrayList<BigDecimal> valuesList = new ArrayList<>();
 		for (int i = 0; i < this.matrix.size; i++) {
 			Row currentRow = this.matrix.rows[i];
-			values.add(currentRow.result / currentRow.values[i]);
+			// Use division with MathContext to avoid non-terminating decimal expansion
+			// issues
+			BigDecimal initial = currentRow.result.divide(currentRow.values[i], MATH_CONTEXT);
+			valuesList.add(initial);
 		}
-		float[] primitiveValues = new float[values.size()];
-		for (int i = 0; i < values.size(); i++) {
-			primitiveValues[i] = values.get(i);
-		}
-		this.approximations.add(new Approximation(primitiveValues));
+		BigDecimal[] approxValues = valuesList.toArray(new BigDecimal[0]);
+		this.approximations.add(new Approximation(approxValues));
 	}
 
 	public void solve() {
 		boolean converged = false;
-		int maxIterations = 1000; // Ну чтобы слишком долго не считало если что
+		int maxIterations = 1000; // Limit iterations to avoid infinite loops
 
 		while (!converged && iteration < maxIterations) {
 			Approximation prevApproximation = this.approximations.get(this.approximations.size() - 1);
-			float[] currentApprox = prevApproximation.values;
-			float[] newApprox = new float[currentApprox.length];
-			float[] diffVector = new float[currentApprox.length];
-			float maxDiff = 0;
+			BigDecimal[] currentApprox = prevApproximation.values;
+			BigDecimal[] newApprox = new BigDecimal[currentApprox.length];
+			BigDecimal[] diffVector = new BigDecimal[currentApprox.length];
+			BigDecimal maxDiff = BigDecimal.ZERO;
 
-			// Новое приближение для каждого x
+			// Compute new approximations for each variable
 			for (int i = 0; i < matrix.size; i++) {
 				Row currentRow = matrix.rows[i];
-				float sum = 0;
+				BigDecimal sum = BigDecimal.ZERO;
 				for (int j = 0; j < matrix.size; j++) {
 					if (j != i) {
-						sum += currentRow.values[j] * currentApprox[j];
+						sum = sum.add(currentRow.values[j].multiply(currentApprox[j], MATH_CONTEXT), MATH_CONTEXT);
 					}
 				}
-				newApprox[i] = (currentRow.result - sum) / currentRow.values[i];
+				// newApprox[i] = (result - sum) / row[i][i]
+				newApprox[i] = currentRow.result.subtract(sum, MATH_CONTEXT).divide(currentRow.values[i], MATH_CONTEXT);
 
-				// Абсолютная погрешность для каждого x
-				float diff = Math.abs(newApprox[i] - currentApprox[i]);
+				// Absolute difference |newApprox[i] - currentApprox[i]|
+				BigDecimal diff = newApprox[i].subtract(currentApprox[i], MATH_CONTEXT).abs();
 				diffVector[i] = diff;
-				if (diff > maxDiff) {
+				if (diff.compareTo(maxDiff) > 0) {
 					maxDiff = diff;
 				}
 			}
 
 			iteration++;
 			printApproximation(iteration, newApprox, diffVector);
-			ConsolePrinter.println("Max difference: " + maxDiff);
+			ConsolePrinter.println("Max difference: " + maxDiff.toPlainString());
 			ConsolePrinter.println(ConsolePrinter.LINE);
 
 			this.approximations.add(new Approximation(newApprox));
 
-			if (maxDiff < absoluteAccuracy) {
+			if (maxDiff.compareTo(absoluteAccuracy) < 0) {
 				converged = true;
 			}
 		}
@@ -90,7 +98,7 @@ public class LinearSystem {
 		}
 	}
 
-	private void printApproximation(int iter, float[] approx, float[] diffVector) {
+	private void printApproximation(int iter, BigDecimal[] approx, BigDecimal[] diffVector) {
 		if (iter == 0) {
 			ConsolePrinter.println("Initial Approximation:");
 		} else {
@@ -99,14 +107,17 @@ public class LinearSystem {
 
 		StringBuilder approximationStr = new StringBuilder();
 		for (int i = 0; i < approx.length; i++) {
-			approximationStr.append(String.format("x%d = %.10f\t", i + 1, approx[i]));
+			// Formatting BigDecimal to 10 decimal places
+			String formattedValue = approx[i].setScale(10, RoundingMode.HALF_UP).toPlainString();
+			approximationStr.append(String.format("x%d = %s\t", i + 1, formattedValue));
 		}
 		ConsolePrinter.println(approximationStr.toString());
 
 		if (diffVector != null) {
-			StringBuilder diffsStr = new StringBuilder("");
+			StringBuilder diffsStr = new StringBuilder();
 			for (int i = 0; i < diffVector.length; i++) {
-				diffsStr.append(String.format("|x%d_diff| = %.10f\t", i + 1, diffVector[i]));
+				String formattedDiff = diffVector[i].setScale(10, RoundingMode.HALF_UP).toPlainString();
+				diffsStr.append(String.format("|x%d_diff| = %s\t", i + 1, formattedDiff));
 			}
 			ConsolePrinter.println(diffsStr.toString());
 		}
@@ -118,8 +129,8 @@ public class LinearSystem {
 		sb.append(System.lineSeparator());
 		sb.append("Parsed System of Linear Equations:");
 		sb.append(System.lineSeparator()).append(System.lineSeparator());
-		sb.append(String.format("Matrix size: %d×%d\t Euclidian norm: %f", this.matrix.size, this.matrix.size,
-				this.matrix.getEuclidianNorm()));
+		sb.append(String.format("Matrix size: %d×%d\t Euclidian norm: %s", this.matrix.size, this.matrix.size,
+				this.matrix.getEuclidianNorm().toPlainString()));
 		sb.append(System.lineSeparator()).append(System.lineSeparator());
 		for (int i = 0; i < this.matrix.rows.length; i++) {
 			if (this.matrix.rows.length == 1) {
@@ -135,7 +146,7 @@ public class LinearSystem {
 			sb.append(System.lineSeparator());
 		}
 		sb.append(System.lineSeparator());
-		sb.append(String.format("Absolute accuracy: %f", this.absoluteAccuracy));
+		sb.append(String.format("Absolute accuracy: %s", this.absoluteAccuracy.toPlainString()));
 		sb.append(System.lineSeparator());
 		return sb.toString();
 	}

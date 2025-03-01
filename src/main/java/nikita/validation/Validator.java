@@ -1,20 +1,22 @@
 package nikita.validation;
 
+import java.math.BigDecimal;
+
 public class Validator {
 
 	public static boolean validateSize(int size) {
 		return (size >= 1 && size <= 20);
 	}
 
-	public static boolean validateAbsoluteAccuracy(float absoluteAccuracy) {
-		return (absoluteAccuracy > 0);
+	public static boolean validateAbsoluteAccuracy(BigDecimal absoluteAccuracy) {
+		return absoluteAccuracy.compareTo(BigDecimal.ZERO) > 0;
 	}
 
-	public static boolean validateResult(float result) {
+	public static boolean validateResult(BigDecimal result) {
 		return true;
 	}
 
-	public static boolean validateRowValue(float value) {
+	public static boolean validateRowValue(BigDecimal value) {
 		return true;
 	}
 
@@ -29,27 +31,27 @@ public class Validator {
 
 	public static boolean validateAbsoluteAccuracy(String absoluteAccuracy) {
 		try {
-			float parsedAccuracy = Float.parseFloat(absoluteAccuracy);
+			BigDecimal parsedAccuracy = new BigDecimal(absoluteAccuracy);
 			return validateAbsoluteAccuracy(parsedAccuracy);
-		} catch (NumberFormatException e) {
+		} catch (NumberFormatException | NullPointerException e) {
 			return false;
 		}
 	}
 
 	public static boolean validateResult(String result) {
 		try {
-			float parsedResult = Float.parseFloat(result);
+			BigDecimal parsedResult = new BigDecimal(result);
 			return validateResult(parsedResult);
-		} catch (NumberFormatException e) {
+		} catch (NumberFormatException | NullPointerException e) {
 			return false;
 		}
 	}
 
 	public static boolean validateRowValue(String value) {
 		try {
-			float parsedValue = Float.parseFloat(value);
+			BigDecimal parsedValue = new BigDecimal(value);
 			return validateRowValue(parsedValue);
-		} catch (NumberFormatException e) {
+		} catch (NumberFormatException | NullPointerException e) {
 			return false;
 		}
 	}

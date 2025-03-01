@@ -1,14 +1,15 @@
 package nikita.math;
 
-public class Row {
-	float[] values;
-	float result;
+import java.math.BigDecimal;
 
-	public Row(float[] values, float result) {
+public class Row {
+	BigDecimal[] values;
+	BigDecimal result;
+
+	public Row(BigDecimal[] values, BigDecimal result) {
 		this.values = values;
 		this.result = result;
 	}
-
 
 	@Override
 	public String toString() {
@@ -22,12 +23,14 @@ public class Row {
 		sb.append("x").append(getSubscript(1));
 
 		for (int i = 1; i < values.length; i++) {
-			if (values[i] >= 0) {
+			// Check if the value is negative based on sign.
+			if (values[i].compareTo(BigDecimal.ZERO) >= 0) {
 				sb.append(" + ");
 				sb.append(formatValueWithSign(values[i], false));
 			} else {
 				sb.append(" - ");
-				sb.append(formatValueWithSign(Math.abs(values[i]), false));
+				// Use absolute value for formatting
+				sb.append(formatValueWithSign(values[i].abs(), false));
 			}
 			sb.append("x").append(getSubscript(i + 1));
 		}
@@ -53,17 +56,26 @@ public class Row {
 		return sb.toString();
 	}
 
-	private String formatValue(float value) {
-		if (value == (int) value) {
-			return String.valueOf((int) value);
+	private String formatValue(BigDecimal value) {
+		// If the value is integral (scale <= 0 or zero fractional part), show as
+		// integer.
+		try {
+			// Remove trailing zeros; if the value is an integer, the scale will be less
+			// than or equal to 0.
+			value = value.stripTrailingZeros();
+		} catch (ArithmeticException e) {
+			// Fallback in case of issues.
+		}
+		if (value.scale() <= 0) {
+			return value.toBigInteger().toString();
 		} else {
-			return String.valueOf(value);
+			return value.toPlainString();
 		}
 	}
 
-	private String formatValueWithSign(float value, boolean isFirst) {
-		if (isFirst && value < 0) {
-			return "-" + formatValue(Math.abs(value));
+	private String formatValueWithSign(BigDecimal value, boolean isFirst) {
+		if (isFirst && value.compareTo(BigDecimal.ZERO) < 0) {
+			return "-" + formatValue(value.abs());
 		}
 		return formatValue(value);
 	}

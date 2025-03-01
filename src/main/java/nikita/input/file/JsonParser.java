@@ -4,6 +4,7 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 
 import org.json.JSONArray;
@@ -25,7 +26,7 @@ public class JsonParser {
 			+ "            {\n" + "                \"row\": [1, 2, 3, 4, 5],\n" + "                \"result\": 13\n" + "            },\n"
 			+ "            {\n" + "                \"row\": [1, 2, 3, 4, 5],\n" + "                \"result\": 14\n" + "            }\n"
 			+ "        ]\n" + "    },\n" + "    \"absolute-accuracy\": 0.01\n" + "}";
-	public static final String ABSOLUTE_ACCURACY_EXPECTED = "Positive float value";
+	public static final String ABSOLUTE_ACCURACY_EXPECTED = "Positive BigDecimal value";
 	public static final String SIZE_EXPECTED = "Integer [1; 20]";
 	public static final String ROW_EXPECTED = "Decimal number";
 	public static final String RESULT_EXPECTED = "Decimal number";
@@ -44,7 +45,7 @@ public class JsonParser {
 
 			ArrayList<Row> rows = new ArrayList<Row>();
 
-			float absoluteAccuracy = this.getAbsoluteAccuracy(jsonObject);
+			BigDecimal absoluteAccuracy = this.getAbsoluteAccuracy(jsonObject);
 			JSONObject matrixObject = this.getMatrix(jsonObject);
 			int size = 0;
 			JSONArray contentArray = null;
@@ -56,12 +57,11 @@ public class JsonParser {
 					if (contentArray != null) {
 						for (int i = 0; i < contentArray.length(); i++) {
 							JSONObject contentEntry = contentArray.getJSONObject(i);
-							Float result = this.getResult(contentEntry);
-							float[] rowValues = this.getRow(contentEntry, size);
+							BigDecimal result = this.getResult(contentEntry);
+							BigDecimal[] rowValues = this.getRow(contentEntry, size);
 							if (result == null || rowValues == null) {
 								shouldEdit = true;
-							}
-							else {
+							} else {
 								Row row = new Row(rowValues, result);
 								rows.add(row);
 							}
@@ -70,7 +70,7 @@ public class JsonParser {
 				}
 			}
 
-			if (absoluteAccuracy == -1 || matrixObject == null || size == -1 || contentArray == null || shouldEdit) {
+			if (absoluteAccuracy == null || matrixObject == null || size == -1 || contentArray == null || shouldEdit) {
 				this.edit(fileName, jsonObject);
 				this.example();
 				throw new JSONException(String.format("The JSON structure in file '%s' is invalid or incomplete. "
@@ -96,22 +96,23 @@ public class JsonParser {
 		}
 	}
 
-	private float getAbsoluteAccuracy(JSONObject jsonObject) throws JSONException, IOException {
+	private BigDecimal getAbsoluteAccuracy(JSONObject jsonObject) throws JSONException, IOException {
 		if (!jsonObject.has("absolute-accuracy")) {
 			jsonObject.put("absolute-accuracy", String.format("Required field. Expected: %s.", JsonParser.ABSOLUTE_ACCURACY_EXPECTED));
-			return -1;
+			return null;
 		}
 
 		try {
-			float absoluteAccuracy = jsonObject.getFloat("absolute-accuracy");
+			// Use toString() to avoid precision loss.
+			BigDecimal absoluteAccuracy = new BigDecimal(jsonObject.get("absolute-accuracy").toString());
 			if (!Validator.validateAbsoluteAccuracy(absoluteAccuracy)) {
-				throw new JSONException("");
+				throw new JSONException("Absolute accuracy did not pass validation.");
 			}
 			return absoluteAccuracy;
 		} catch (JSONException e) {
 			jsonObject.put("absolute-accuracy", String.format("Provided: %s. Expected: %s.", jsonObject.get("absolute-accuracy"),
 					JsonParser.ABSOLUTE_ACCURACY_EXPECTED));
-			return -1;
+			return null;
 		}
 	}
 
@@ -120,10 +121,10 @@ public class JsonParser {
 			JSONObject matrixObject = new JSONObject();
 			matrixObject.put("size", String.format("Required field. Expected: %s.", JsonParser.SIZE_EXPECTED));
 
-			org.json.JSONArray contentArray = new org.json.JSONArray();
+			JSONArray contentArray = new JSONArray();
 			for (int i = 0; i < 5; i++) {
 				JSONObject contentEntry = new JSONObject();
-				org.json.JSONArray rowArray = new org.json.JSONArray();
+				JSONArray rowArray = new JSONArray();
 				for (int j = 0; j < 5; j++) {
 					rowArray.put(JsonParser.ROW_EXPECTED);
 				}
@@ -175,19 +176,20 @@ public class JsonParser {
 			}
 			return contentArray;
 		} catch (JSONException e) {
-			matrixObject.put("content", String.format("Provided: %s. Expected %s", matrixObject.get("content")));
+			matrixObject.put("content",
+					String.format("Provided: %s. Expected: %s.", matrixObject.get("content"), JsonParser.CONTENT_EXPECTED));
 			return null;
 		}
 
 	}
 
-	private Float getResult(JSONObject contentEntry) throws JSONException {
+	private BigDecimal getResult(JSONObject contentEntry) throws JSONException {
 		if (!contentEntry.has("result")) {
 			contentEntry.put("result", String.format("Required field. Expected: %s.", JsonParser.RESULT_EXPECTED));
 			return null;
 		}
 		try {
-			float result = contentEntry.getFloat("result");
+			BigDecimal result = new BigDecimal(contentEntry.get("result").toString());
 			if (!Validator.validateResult(result)) {
 				throw new JSONException("Result value did not pass validation.");
 			}
@@ -199,7 +201,7 @@ public class JsonParser {
 		}
 	}
 
-	private float[] getRow(JSONObject contentEntry, int size) {
+	private BigDecimal[] getRow(JSONObject contentEntry, int size) {
 		if (!contentEntry.has("row")) {
 			contentEntry.put("row", String.format("Required field. Expected: Array of %s of length %d.", JsonParser.ROW_EXPECTED, size));
 			return null;
@@ -213,13 +215,13 @@ public class JsonParser {
 				return null;
 			}
 
-			float[] rowValues = new float[size];
+			BigDecimal[] rowValues = new BigDecimal[size];
 			for (int j = 0; j < rowArray.length(); j++) {
 				Object rowValueObj = rowArray.get(j);
 				try {
-					float rowValue;
-					if (rowValueObj instanceof Number) {
-						rowValue = ((Number) rowValueObj).floatValue();
+					BigDecimal rowValue;
+					if (rowValueObj instanceof Number || rowValueObj instanceof String) {
+						rowValue = new BigDecimal(rowValueObj.toString());
 					} else {
 						throw new JSONException("Row value is not numeric.");
 					}
@@ -239,7 +241,6 @@ public class JsonParser {
 			return null;
 		}
 	}
-
 
 	private void edit(String fileName, JSONObject jsonObject) throws JSONException, IOException {
 		this.fileOperator.write(fileName, jsonObject.toString(2));
